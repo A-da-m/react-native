@@ -44,6 +44,14 @@ static BOOL RCTJSCSetOption(const char *option)
   static RCTJSCSetOptionType setOption;
   static dispatch_once_t onceToken;
 
+  // As of iOS 13.4, it is no longer possible to change the JavaScriptCore
+  // options at runtime. The options are protected and will cause an
+  // exception when you try to change them after the VM has been initialized.
+  // https://github.com/facebook/react-native/issues/28414
+  if (@available(iOS 13.4, *)) {
+    return NO;
+  }
+
   dispatch_once(&onceToken, ^{
     /**
      * JSC private C++ static method to toggle options at runtime
@@ -197,12 +205,19 @@ RCT_EXPORT_MODULE()
 {
   if (!_container) {
     _container = [[UIView alloc] initWithFrame:CGRectMake(10, 25, 180, RCTPerfMonitorBarHeight)];
-    _container.backgroundColor = UIColor.whiteColor;
     _container.layer.borderWidth = 2;
     _container.layer.borderColor = [UIColor lightGrayColor].CGColor;
     [_container addGestureRecognizer:self.gestureRecognizer];
     [_container addGestureRecognizer:[[UITapGestureRecognizer alloc] initWithTarget:self
                                                                              action:@selector(tap)]];
+    
+    _container.backgroundColor = [UIColor whiteColor];
+    #if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && defined(__IPHONE_13_0) && \
+    __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_0
+    if (@available(iOS 13.0, *)) {
+      _container.backgroundColor = [UIColor systemBackgroundColor];
+    }
+    #endif
   }
 
   return _container;
